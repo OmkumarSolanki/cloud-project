@@ -1,0 +1,7 @@
+Enable Cloud DNS API on GCP
+Create a DNS Zone in Network Services -> Cloud DNS
+Assign the NS names that are created in GCP in namecheap -> Custom DNS and then add 4 values
+
+changed yml file to use default mysql Services
+For ubuntu also change the username and password
+the default username and password are root and root

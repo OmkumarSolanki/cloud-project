@@ -1,0 +1,12 @@
+enable this api - Cloud Key Management Service (KMS) API
+ 
+https://blog.knoldus.com/how-to-create-kms-keys-in-gcp-with-terraform/
+ 
+https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/kms_key_ring
+https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/kms_crypto_key
+ 
+terraform import module.kms.google_kms_key_ring.default projects/csye-6225-spring-2024-dev/locations/us-east1/keyRings/my-keyring
+
+https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#environment-files
+
+https://stackoverflow.com/questions/67789507/generate-unique-string-in-github-actions

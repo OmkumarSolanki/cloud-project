@@ -1,0 +1,22 @@
+name: Node.js CI
+
+on: [pull_request]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: app
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "21.x"
+            - name: Install Test Dependency
+              run: npm i -g -D jest
+            - run: npm ci
+            # - run: npm test
+            - run: echo Hello, World!

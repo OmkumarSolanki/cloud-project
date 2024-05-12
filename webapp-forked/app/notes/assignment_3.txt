@@ -1,0 +1,1 @@
+packer validate -var-file="packer/variables/dev.pkrvars.hcl" packer/templates/.

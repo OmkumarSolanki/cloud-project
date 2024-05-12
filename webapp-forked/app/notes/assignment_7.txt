@@ -1,0 +1,28 @@
+Create a domain at mailgun
+Add the records of the mailgun into GCP Cloud DNS -> Zone -> Add Standard
+https://app.mailgun.com/setup
+
+Go to Pub/Sub in GCP
+Then Create a Topic
+Add a topic id
+Enable message retention -> 7 days
+
+Go to Cloud Functions in GCP
+Create a new function
+In Trigger Select Cloud Pub/Sub
+Select the topic you created
+Create a function and download the zip
+
+SELECT * FROM db-name.Users;
+delete from testdb.Users where username = ''
+
+Also Enable this API - Cloud SQL Admin API
+https://cloud.google.com/sql/docs/mysql/connect-functions
+
+Enable this API - Serverless VPC Access API for 
+https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#console
+
+sudo mysql -u webapp -h "private_ip" -p
+sudo mysql -u webapp -h 10.0.2.11 -p
+
+https://cloud.google.com/sql/docs/mysql/connect-functions#private-ip

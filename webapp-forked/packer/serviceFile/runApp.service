@@ -1,0 +1,17 @@
+[Unit]
+Description=CSYE 6225 App
+ConditionPathExists=/home/csye6225/app/.env
+After=network.target
+
+[Service]
+User=csye6225
+ExecStart=/usr/bin/node /home/csye6225/app/server.js
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=csye6225
+EnvironmentFile=/home/csye6225/app/.env
+
+[Install]
+WantedBy=multi-user.target

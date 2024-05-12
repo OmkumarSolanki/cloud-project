@@ -1,0 +1,26 @@
+name: Check Terraform Validate and format
+
+on: [pull_request, push]
+
+jobs:
+    fmt-check:
+        runs-on: ubuntu-latest
+        name: Check terraform files format
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Terraform fmt command
+              run: terraform fmt -recursive -check
+    validate:
+        runs-on: ubuntu-latest
+        name: Check Terrafrom Validation
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Terraform init
+              run: terraform init
+
+            - name: Terraform validate
+              run: terraform validate

@@ -1,0 +1,40 @@
+name: testSQL
+
+on: [pull_request]
+
+jobs:
+    server-api:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: app
+          
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: start mysql server
+              run: sudo systemctl start mysql.service
+  
+            - name: Create new env file
+              run: |
+                  touch .env
+                  echo MYSQL_DB_NAME=${{ secrets.MYSQL_DB_NAME_APP }} >> .env
+                  echo MYSQL_USERNAME=${{ secrets.MYSQL_USERNAME_APP }}>> .env
+                  echo MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD_APP }} >> .env
+                  echo TEST_MYSQL_DB_NAME=${{ secrets.MYSQL_DB_NAME_APP }} >> .env
+                  echo PORT=3000
+
+            - name: Use Node.js version 21
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "21.x"
+
+            - name: Run npm Install command
+              run: npm ci
+
+            - name: Install Test Dependencies command
+              run: npm i -g -D jest supertest
+
+            - name: Run api test command
+              run: npm test

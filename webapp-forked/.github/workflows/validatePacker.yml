@@ -1,0 +1,31 @@
+name: Packer Validate
+
+on: [pull_request]
+
+jobs:
+    fmt-check:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: packer
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Packer fmt command
+              run: packer fmt -check $GITHUB_WORKSPACE/packer/templates/.
+
+    validate:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: packer
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Packer init comamnd
+              run: packer init $GITHUB_WORKSPACE/packer/templates/.
+
+            - name: Packer Validate Command
+              run: 'packer validate -var "project_id=${{ secrets.PROJECT_ID }}" -var "source_image_family=${{ secrets.SOURCE_IMAGE_FAMILY }}" -var "ssh_username=${{ secrets.SSH_USERNAME }}" -var "zone=${{ secrets.ZONE }}" -var "machine_type=${{ secrets.MACHINE_TYPE }}"  $GITHUB_WORKSPACE/packer/templates/. '

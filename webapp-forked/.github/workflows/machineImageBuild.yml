@@ -1,0 +1,129 @@
+name: Machine Image Build and Deploy
+
+on: [push]
+
+jobs:
+    packer-build:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: packer
+        steps:
+            - name: Checkout the Source Code
+              uses: "actions/checkout@v3"
+
+            - name: Connect with GCP Authentication
+
+              uses: "google-github-actions/auth@v1"
+              with:
+                  credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+            - name: Setup Packer for running
+              uses: hashicorp/setup-packer@main
+              with:
+                  version: "latest"
+
+            - name: Packer Init Command
+              run: "packer init $GITHUB_WORKSPACE/packer/templates/."
+
+            - name: Packer Validate Command
+              run: |
+                packer validate \
+                  -var "project_id=${{ secrets.PROJECT_ID }}" \
+                  -var "source_image_family=${{ secrets.SOURCE_IMAGE_FAMILY }}" \
+                  -var "ssh_username=${{ secrets.SSH_USERNAME }}" \
+                  -var "zone=${{ secrets.ZONE }}" \
+                  -var "machine_type=${{ secrets.MACHINE_TYPE }}" \
+                  $GITHUB_WORKSPACE/packer/templates/.
+
+            - name: Packer Build Command
+              id: image
+              run: |
+                packer build \
+                  -var "project_id=${{ secrets.PROJECT_ID }}" \
+                  -var "source_image_family=${{ secrets.SOURCE_IMAGE_FAMILY }}" \
+                  -var "ssh_username=${{ secrets.SSH_USERNAME }}" \
+                  -var "zone=${{ secrets.ZONE }}" \
+                  -var "machine_type=${{ secrets.MACHINE_TYPE }}" \
+                  $GITHUB_WORKSPACE/packer/templates/.
+                  
+    create-instance-update-instance-group:
+        needs: packer-build
+        runs-on: ubuntu-latest
+        steps:
+            - name: Connect with GCP Authentication
+              uses: "google-github-actions/auth@v1"
+              with:
+                  credentials_json: ${{ secrets.GCP_CREDENTIALS_VM }}
+
+            - name: Fetch Latest Image
+              run: |
+                  image_id=$(gcloud asset search-all-resources --scope='projects/${{ secrets.PROJECT_ID }}' \
+                    --query='name:centos*' \
+                    --order-by='createTime desc' \
+                    --asset-types='compute.googleapis.com/Image' \
+                    --format='value(displayName)' \
+                    --limit=1)
+                  echo "image_id=$image_id" >> "$GITHUB_ENV"
+                  echo "image_id: $image_id"
+
+            - name: generate random name for vm - template
+              id : template-name
+              run: echo template_name=vm-template-packer-$(date +"%Y-%m-%d-%H-%M-%S") >> "$GITHUB_ENV"
+
+            - name: Create Instance
+              run: |
+                  echo "Using image ID: $image_id"
+                  gcloud beta compute instance-templates create "$template_name" \
+                    --project=${{ secrets.PROJECT_ID }} \
+                    --description="This template is used to create vm instances." \
+                    --machine-type=${{ secrets.MACHINE_TYPE }} \
+                    --network-interface=network-tier=${{ secrets.NETWORK_TIER }},subnet=${{ secrets.SUBNETWORK_NAME }} \
+                    --instance-template-region=${{ secrets.REGION }} \
+                    --metadata=startup-script="#!/bin/bash
+
+                      touch /tmp/.env
+
+                      echo \"PORT=${{ secrets.PORT }}\" >> /tmp/.env
+                      echo \"MYSQL_USERNAME=${{ secrets.CLOUD_SQL_USERNAME }}\" >> /tmp/.env
+                      echo \"MYSQL_PASSWORD=${{ secrets.CLOUD_SQL_PASSWORD }}\" >> /tmp/.env
+                      echo \"MYSQL_DB_NAME=${{ secrets.CLOUD_SQL_DB_NAME }}\" >> /tmp/.env
+                      echo \"TEST_MYSQL_DB_NAME=${{ secrets.CLOUD_SQL_DB_NAME }}\" >> /tmp/.env
+                      echo \"MYSQL_HOST=${{ secrets.CLOUD_SQL_HOST }}\" >> /tmp/.env
+                      echo \"NODE_ENV=${{ secrets.NODE_ENV }}\" >> /tmp/.env
+                      echo \"TOPIC_ID=${{ secrets.PUB_SUB_TOPIC_ID }}\" >> /tmp/.env
+                      echo \"PROJECT_ID=${{ secrets.PROJECT_ID }}\" >> /tmp/.env
+                      
+                      mv /tmp/.env /home/csye6225/app/.env
+                      chown -R csye6225:csye6225 /home/csye6225/app
+
+                      systemctl start runApp" \
+                    --maintenance-policy=MIGRATE \
+                    --provisioning-model=STANDARD \
+                    --service-account=${{ secrets.SERVICE_ACC_VM }} \
+                    --scopes=https://www.googleapis.com/auth/cloud-platform \
+                    --region=${{ secrets.REGION }} \
+                    --tags=${{ secrets.TAGS }} \
+                    --create-disk=auto-delete=yes,boot=yes,device-name=persistent-disk-0,image=projects/${{ secrets.PROJECT_ID }}/global/images/$image_id,kms-key=projects/${{ secrets.PROJECT_ID }}/locations/${{ secrets.REGION }}/keyRings/${{ secrets.KEYRING_NAME }}/cryptoKeys/${{ secrets.VM_CRYPTO_KEY }},mode=rw,size=20,type=pd-standard \
+                    --no-shielded-secure-boot \
+                    --no-shielded-vtpm \
+                    --no-shielded-integrity-monitoring \
+                    --reservation-affinity=any
+            - name: Start Rolling Update
+              run: |
+                    gcloud beta compute instance-groups managed rolling-action start-update ${{ secrets.GROUP_MANAGER_NAME }} \
+                    --project=${{ secrets.PROJECT_ID }} \
+                    --type='proactive' \
+                    --max-surge=3 \
+                    --max-unavailable=0 \
+                    --min-ready=0 \
+                    --minimal-action='replace' \
+                    --most-disruptive-allowed-action='replace' \
+                    --replacement-method='substitute' \
+                    --version=template=projects/${{ secrets.PROJECT_ID }}/regions/${{ secrets.REGION }}/instanceTemplates/"$template_name" \
+                    --region=${{ secrets.REGION }}
+            - name: Check Group Manager Status
+              run: |
+                  gcloud compute instance-groups managed wait-until ${{ secrets.GROUP_MANAGER_NAME }} \
+                    --version-target-reached \
+                    --region=${{ secrets.REGION }}

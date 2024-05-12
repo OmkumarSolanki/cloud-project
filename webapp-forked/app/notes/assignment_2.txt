@@ -1,0 +1,74 @@
+Create a droplet in Digital Ocean using Centos 8
+Configure the ssh key
+
+To connect with the server
+ssh -i ~/.ssh/digitalOcean root@"ip-address-server"
+
+dnf remove @mysql
+
+dnf module reset mysql && sudo dnf module disable mysql
+
+vi /etc/yum.repos.d/mysql-community.repo
+
+Add these in the file
+
+====== Start from here ======== 
+
+[mysql57-community]
+
+name=MySQL 5.7 Community Server
+
+baseurl=http://repo.mysql.com/yum/mysql-5.7-community/el/7/$basearch/
+
+enabled=1
+
+gpgcheck=0
+ 
+[mysql-connectors-community]
+
+name=MySQL Connectors Community
+
+baseurl=http://repo.mysql.com/yum/mysql-connectors-community/el/7/$basearch/
+
+enabled=1
+
+gpgcheck=0
+ 
+[mysql-tools-community]
+
+name=MySQL Tools Community
+
+baseurl=http://repo.mysql.com/yum/mysql-tools-community/el/7/$basearch/
+
+enabled=1
+
+gpgcheck=0
+
+====== End Here =======
+
+dnf --enablerepo=mysql57-community install mysql-community-server
+
+sudo systemctl enable --now mysqld.service
+
+sudo systemctl status mysqld.service
+
+grep 'A temporary password' /var/log/mysqld.log |tail -1
+
+yum install zip unzip 
+
+Copy the code from local pc to server
+scp -i ~/.ssh/digitalOcean local_address root@"ip-address":"address-where-to-copy"
+scp -i ~/.ssh/digitalOcean C:\Users\solan\Downloads\webapp-main.zip root@137.184.80.27:/root/assignment2
+
+unzip zipFileName.zip
+
+dnf module enable nodejs:20
+
+dnf install nodejs
+
+To move any files use 
+mv file_location destination
+
+To change SQL Password
+
+https://www.liquidweb.com/kb/change-a-password-for-mysql-on-linux-via-command-line/
